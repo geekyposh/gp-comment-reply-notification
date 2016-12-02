@@ -52,9 +52,9 @@ class GP_Comment_Reply {
         add_action( 'admin_init', array( $this, 'page_init' ) );
 	 	add_action('wp_insert_comment', array( $this, 'comment_notification' ), 99, 2 );
 	 	add_action('comment_post', array($this,'save_mail_reply'));
-	 	add_action('comment_form_after_fields', array($this,'add_reply_id_form_field'),99, 2);
+	 	add_action('comment_form', array($this,'add_reply_id_form_field'),99, 2);
 	 	add_action('wp_set_comment_status', array( $this, 'comment_status_changed' ), 99, 2 );
-	 	add_action('add_meta_boxes_comment', array( $this, 'extend_comment_add_mail_status' ) );
+	 	//add_action('add_meta_boxes_comment', array( $this, 'extend_comment_add_mail_status' ) );
 	 }
 
 	/**
@@ -103,7 +103,7 @@ class GP_Comment_Reply {
 	 */
 	public function send_email( $comment_id, $comment_object, $comment_parent ) {
 		$email_options = get_option('gp_email_options');
-		$recipient = $comment_parent->comment_author_email;
+		$recipient = $comment_parent->comment_author.' <'.$comment_parent->comment_author_email.'>';
 		$subject   = $email_options['email_subject'];
 		$shortcode_replace = array( 
 			'[BLOGNAME]' => get_option('blogname'), 
@@ -121,7 +121,7 @@ class GP_Comment_Reply {
 
 		$message = ob_get_clean();
 
-		$headers = array('Content-Type: text/html; charset=UTF-8');
+		$headers = array('From: '.get_option('blogname').' <'.get_option('admin_email').'>', 'Content-Type: text/html; charset=UTF-8');
 		wp_mail( $recipient, $subject, $message, $headers );
 	}
 	public function strReplaceAssoc(array $replace, $subject) { 
@@ -133,11 +133,11 @@ class GP_Comment_Reply {
 	 * @since  1.0.0
 	 */
 	public function add_reply_id_form_field($comment_id){
-		echo '<p><input type="checkbox" name="comment_mail_notify" id="comment_mail_notify" checked="checked" value="1" /><label for="comment_mail_notify">Notify me of follow-up comments via e-mail</label></p>';
+		echo '<p><input type="checkbox" name="gp_comment_mail_notify" id="gp_comment_mail_notify" checked="checked" value="1" /><label for="gp_comment_mail_notify">Notify me of follow-up comments via e-mail</label></p>';
 	}
 	public function save_mail_reply($comment_id){
-		if ( isset( $_POST['comment_mail_notify'] ) ){
-			add_comment_meta( $comment_id, 'comment_mail_notify', $_POST['comment_mail_notify'] );
+		if ( isset( $_POST['gp_comment_mail_notify'] ) ){
+			add_comment_meta( $comment_id, 'comment_mail_notify', $_POST['gp_comment_mail_notify'] );
 		}else{
 			add_comment_meta( $comment_id, 'comment_mail_notify', '0' );
 		}	
@@ -209,7 +209,7 @@ class GP_Comment_Reply {
             $new_input['email_subject'] = sanitize_text_field( $input['email_subject'] );
 
         if( isset( $input['email_content'] ) )
-            $new_input['email_content'] = sanitize_text_field( $input['email_content'] );
+            $new_input['email_content'] = $input['email_content'];
 
         return $new_input;
     }
